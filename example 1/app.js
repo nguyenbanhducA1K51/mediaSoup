@@ -12,13 +12,14 @@ import https from 'httpolyglot'
 import fs from 'fs'
 import path from 'path'
 const __dirname = path.resolve()
-
+import cors from "cors"
 import { Server } from 'socket.io'
 import mediasoup, { getSupportedRtpCapabilities } from 'mediasoup'
 
 app.get('/', (req, res) => {
   res.send('Hello from mediasoup app!')
 })
+app.use(cors("*"))
 
 const parentDir = path.dirname(__dirname);
 console.log("p", parentDir);
@@ -40,7 +41,12 @@ httpsServer.listen(3000, () => {
   console.log('listening on port: ' + 3000)
 })
 
-const io = new Server(httpsServer)
+const io = new Server(httpsServer, {
+  allowEIO3: true,
+  cors: {
+    origin:"*"
+  }
+})
 
 // socket.io namespace (could represent a room?)
 const peers = io.of('/mediasoup')
