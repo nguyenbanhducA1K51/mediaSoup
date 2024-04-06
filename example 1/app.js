@@ -4,6 +4,7 @@
 
 /* Please follow mediasoup installation requirements */
 /* https://mediasoup.org/documentation/v3/mediasoup/installation/ */
+process.env.DEBUG = "mediasoup*"
 import express from 'express'
 const app = express()
 
@@ -19,7 +20,14 @@ app.get('/', (req, res) => {
   res.send('Hello from mediasoup app!')
 })
 
-app.use('/sfu', express.static(path.join(__dirname, 'public')))
+const parentDir = path.dirname(__dirname);
+console.log("p", parentDir);
+console.log('dir', __dirname);
+
+
+app.use('/post', express.static(path.join(parentDir, 'client1/public')))
+
+app.use('/get',express.static(path.join(__dirname,"client2/public")))
 
 // SSL cert for HTTPS access
 const options = {
@@ -176,6 +184,7 @@ peers.on('connection', async socket => {
         producerId: producer.id,
         rtpCapabilities
       })) {
+
         // transport can now consume and return a consumer
         consumer = await consumerTransport.consume({
           producerId: producer.id,
