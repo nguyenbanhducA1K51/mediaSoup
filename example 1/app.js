@@ -22,13 +22,9 @@ app.get('/', (req, res) => {
 app.use(cors("*"))
 
 const parentDir = path.dirname(__dirname);
-console.log("p", parentDir);
-console.log('dir', __dirname);
-
-
 app.use('/post', express.static(path.join(parentDir, 'client1/public')))
 
-app.use('/get',express.static(path.join(__dirname,"client2/public")))
+app.use('/get', express.static(path.join(__dirname, "client2/public")))
 
 // SSL cert for HTTPS access
 const options = {
@@ -44,7 +40,7 @@ httpsServer.listen(3000, () => {
 const io = new Server(httpsServer, {
   allowEIO3: true,
   cors: {
-    origin:"*"
+    origin: "*"
   }
 })
 
@@ -65,6 +61,9 @@ let producerTransport
 let consumerTransport
 let producer
 let consumer
+
+let producerSocketId
+let consumerSocketId
 
 const createWorker = async () => {
   worker = await mediasoup.createWorker({
@@ -107,7 +106,7 @@ const mediaCodecs = [
 ]
 
 peers.on('connection', async socket => {
-  console.log(socket.id)
+
   socket.emit('connection-success', {
     socketId: socket.id,
     existsProducer: producer ? true : false,
@@ -144,10 +143,14 @@ peers.on('connection', async socket => {
     console.log(`Is this a sender request? ${sender}`)
     // The client indicates if it is a producer or a consumer
     // if sender is true, indicates a producer else a consumer
-    if (sender)
+    if (sender) {
+      producerSocketId = socket.id
       producerTransport = await createWebRtcTransport(callback)
-    else
+    }
+    else {
+      consumerSocketId=socket.id
       consumerTransport = await createWebRtcTransport(callback)
+    }
   })
 
   // see client's socket.emit('transport-connect', ...)
@@ -184,13 +187,15 @@ peers.on('connection', async socket => {
   })
 
   socket.on('consume', async ({ rtpCapabilities }, callback) => {
+    // console.log('produce id',producer.id, "rtp cap",rtpCapabilities);
     try {
       // check if the router can consume the specified producer
       if (router.canConsume({
         producerId: producer.id,
         rtpCapabilities
       })) {
-
+        console.log('can consume');
+        
         // transport can now consume and return a consumer
         consumer = await consumerTransport.consume({
           producerId: producer.id,
@@ -203,6 +208,7 @@ peers.on('connection', async socket => {
         })
 
         consumer.on('producerclose', () => {
+          
           console.log('producer of consumer closed')
         })
 
@@ -226,6 +232,18 @@ peers.on('connection', async socket => {
         }
       })
     }
+  })
+
+
+  socket.on('closeAll', () => {
+    if (producer) {
+      producer.close()
+    }
+    if (producerTransport) {
+      producerTransport.close()
+    }
+      socket.broadcast.emit('closeproduce');
+    
   })
 
   socket.on('consumer-resume', async () => {

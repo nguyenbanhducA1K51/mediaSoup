@@ -2,20 +2,58 @@
 //index.js
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
-
 const socket = io("/mediasoup")
+let device
+let rtpCapabilities
+let consumerTransport
+let consumer
+let isProducer = false
+
+let mediaRecorder
+let recordedChunks = []
 
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   console.log(socketId, existsProducer)
+
 })
 
-let device
-let rtpCapabilities
-let producerTransport
-let consumerTransport
-let producer
-let consumer
-let isProducer = false
+
+const saveStream = async (stream) => {
+  try {
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function (event) {
+      if (event.data.size > 0) {
+        
+        recordedChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = (e) => {      
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'recorded-video.webm';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url)
+      recordedChunks = [];
+    }
+
+    mediaRecorder.start()
+
+  } catch (err) {
+    console.error('Error accessing webcam:', err);
+  }
+}
+
+
+
+socket.on("closeproduce", () => {
+  const video = document.getElementById("remoteVideo")
+  mediaRecorder.stop()
+  video.src = ''
+})
 
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerOptions
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
@@ -69,32 +107,28 @@ const getLocalStream = () => {
       }
     }
   })
-  .then(streamSuccess)
-  .catch(error => {
-    console.log(error.message)
-  })
+    .then(streamSuccess)
+    .catch(error => {
+      console.log(error.message)
+    })
 }
 
-const goConsume = () => {
-  goConnect(false)
-}
 
 /**
  * This function will perform connection to Router
  * @param {*} producerOrConsumer return true if producer and false if consumer
  */
-const goConnect = (producerOrConsumer) => {
-  isProducer = producerOrConsumer
-  device === undefined ? getRtpCapabilities() : goCreateTransport()
+const goConsume = () => {
+  device === undefined ? getRtpCapabilities() : createRecvTransport()
 }
 
-const goCreateTransport = () => {
-  isProducer ? createSendTransport() : createRecvTransport()
-}
+
 
 // A device is an endpoint connecting to a Router on the 
 // server side to send/recive media
 const createDevice = async () => {
+  console.log('stage2');
+
   try {
     device = new mediasoupClient.Device()
 
@@ -105,10 +139,10 @@ const createDevice = async () => {
       routerRtpCapabilities: rtpCapabilities
     })
 
-    console.log('Device RTP Capabilities', device.rtpCapabilities)
+    // console.log('Device RTP Capabilities', device.rtpCapabilities)
 
     // once the device loads, create transport
-    goCreateTransport()
+    createRecvTransport()
 
   } catch (error) {
     console.log(error)
@@ -118,11 +152,13 @@ const createDevice = async () => {
 }
 
 const getRtpCapabilities = () => {
+  console.log('stage1');
+
   // make a request to the server for Router RTP Capabilities
   // see server's socket.on('getRtpCapabilities', ...)
   // the server sends back data object which contains rtpCapabilities
   socket.emit('createRoom', (data) => {
-    console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
+    // console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
 
     // we assign to local variable and will be used when
     // loading the client Device (see createDevice above)
@@ -133,90 +169,9 @@ const getRtpCapabilities = () => {
   })
 }
 
-const createSendTransport = () => {
-  // see server's socket.on('createWebRtcTransport', sender?, ...)
-  // this is a call from Producer, so sender = true
-  socket.emit('createWebRtcTransport', { sender: true }, ({ params }) => {
-    // The server sends back params needed 
-    // to create Send Transport on the client side
-    if (params.error) {
-      console.log(params.error)
-      return
-    }
-
-    console.log(params)
-
-    // creates a new WebRTC Transport to send media
-    // based on the server's producer transport params
-    // https://mediasoup.org/documentation/v3/mediasoup-client/api/#TransportOptions
-    producerTransport = device.createSendTransport(params)
-
-    // https://mediasoup.org/documentation/v3/communication-between-client-and-server/#producing-media
-    // this event is raised when a first call to transport.produce() is made
-    // see connectSendTransport() below
-    producerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
-      try {
-        // Signal local DTLS parameters to the server side transport
-        // see server's socket.on('transport-connect', ...)
-        await socket.emit('transport-connect', {
-          dtlsParameters,
-        })
-
-        // Tell the transport that parameters were transmitted.
-        callback()
-
-      } catch (error) {
-        errback(error)
-      }
-    })
-
-    producerTransport.on('produce', async (parameters, callback, errback) => {
-      console.log(parameters)
-
-      try {
-        // tell the server to create a Producer
-        // with the following parameters and produce
-        // and expect back a server side producer id
-        // see server's socket.on('transport-produce', ...)
-        await socket.emit('transport-produce', {
-          kind: parameters.kind,
-          rtpParameters: parameters.rtpParameters,
-          appData: parameters.appData,
-        }, ({ id }) => {
-          // Tell the transport that parameters were transmitted and provide it with the
-          // server side producer's id.
-          callback({ id })
-        })
-      } catch (error) {
-        errback(error)
-      }
-    })
-
-    connectSendTransport()
-  })
-}
-
-const connectSendTransport = async () => {
-  // we now call produce() to instruct the producer transport
-  // to send media to the Router
-  // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
-  // this action will trigger the 'connect' and 'produce' events above
-  producer = await producerTransport.produce(params)
-
-  producer.on('trackended', () => {
-    console.log('track ended')
-
-    // close video track
-  })
-
-  producer.on('transportclose', () => {
-    console.log('transport ended')
-
-    // close video track
-  })
-}
-
 const createRecvTransport = async () => {
+  console.log('stage3');
+
   // see server's socket.on('consume', sender?, ...)
   // this is a call from Consumer, so sender = false
   await socket.emit('createWebRtcTransport', { sender: false }, ({ params }) => {
@@ -226,9 +181,6 @@ const createRecvTransport = async () => {
       console.log(params.error)
       return
     }
-
-    console.log(params)
-
     // creates a new WebRTC Transport to receive media
     // based on server's consumer transport params
     // https://mediasoup.org/documentation/v3/mediasoup-client/api/#device-createRecvTransport
@@ -258,21 +210,22 @@ const createRecvTransport = async () => {
 }
 
 const connectRecvTransport = async () => {
+  console.log('stage4');
+
   // for consumer, we need to tell the server first
   // to create a consumer based on the rtpCapabilities and consume
   // if the router can consume, it will send back a set of params as below
   await socket.emit('consume', {
     rtpCapabilities: device.rtpCapabilities,
   }, async ({ params }) => {
-    
+
     if (params.error) {
-      console.log('error', params.error );
-      
+      console.log('error', params.error);
       console.log('Cannot Consume')
       return
     }
 
-    console.log(params)
+    // console.log(params)
     // then consume with the local consumer transport
     // which creates a consumer
     consumer = await consumerTransport.consume({
@@ -284,16 +237,17 @@ const connectRecvTransport = async () => {
 
     // destructure and retrieve the video track from the producer
     const { track } = consumer
+    let stream = new MediaStream([track])
+    remoteVideo.srcObject = stream
+    // await saveStream()
 
-    remoteVideo.srcObject = new MediaStream([track])
-
+    await saveStream(stream)
     // the server consumer started with media paused
     // so we need to inform the server to resume
     socket.emit('consumer-resume')
   })
 }
 
-btnLocalVideo.addEventListener('click', getLocalStream)
 btnRecvSendTransport.addEventListener('click', goConsume)
 },{"mediasoup-client":59,"socket.io-client":71}],2:[function(require,module,exports){
 
