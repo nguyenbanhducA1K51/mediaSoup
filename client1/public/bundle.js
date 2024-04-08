@@ -22874,11 +22874,11 @@ arguments[4][6][0].apply(exports,arguments)
 })(typeof window === 'object' ? window : this);
 
 },{}],100:[function(require,module,exports){
-//index.js
+
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
-// const socket = io("/mediasoup")
+// const socket = io("https://172.105.148.82:3000/mediasoup")
 const socket = io("https://localhost:3000/mediasoup")
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   // console.log(socketId, existsProducer)
@@ -22889,37 +22889,39 @@ let rtpCapabilities
 let producerTransport
 let producer
 let isProducer = false
-
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerOptions
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
 let params = {
   // mediasoup params
-  encodings: [
-    {
-      rid: 'r0',
-      maxBitrate: 100000,
-      scalabilityMode: 'S3T3',
-    },
-    {
-      rid: 'r1',
-      maxBitrate: 300000,
-      scalabilityMode: 'S3T3',
-    },
-    {
-      rid: 'r2',
-      maxBitrate: 900000,
-      scalabilityMode: 'S3T3',
-    },
-  ],
+  // encodings: [
+  //   {
+  //     rid: 'r0',
+  //     maxBitrate: 100000,
+  //     scalabilityMode: 'S3T3',
+  //   },
+  //   {
+  //     rid: 'r1',
+  //     maxBitrate: 300000,
+  //     scalabilityMode: 'S3T3',
+  //   },
+  //   {
+  //     rid: 'r2',
+  //     maxBitrate: 900000,
+  //     scalabilityMode: 'S3T3',
+  //   },
+  // ],
   // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerCodecOptions
-  codecOptions: {
-    videoGoogleStartBitrate: 1000
-  }
+  // codecOptions: {
+  //   videoGoogleStartBitrate: 1000
+  // }
 }
 
 const streamSuccess = (stream) => {
   localVideo.srcObject = stream
-  const track = stream.getVideoTracks()[0]
+  // const track =[stream.getVideoTracks()[0], stream.getAudioTracks()[0]]
+  const track = stream.getAudioTracks()[0]
+  console.log('client1', track);
+  // const audioTrack = ;
   params = {
     track,
     ...params
@@ -22930,7 +22932,7 @@ const streamSuccess = (stream) => {
 
 const getLocalStream = () => {
   navigator.mediaDevices.getUserMedia({
-    audio: false,
+    audio: true,
     video: {
       width: {
         min: 640,

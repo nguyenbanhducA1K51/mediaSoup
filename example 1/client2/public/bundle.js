@@ -3,8 +3,8 @@
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
-// const socket = io("/mediasoup")
-const socket = io("https://172.105.148.82:3000/mediasoup")
+const socket = io("/mediasoup")
+// const socket = io("https://172.105.148.82:3000/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -31,7 +31,7 @@ const saveStream = async (stream) => {
     };
 
     mediaRecorder.onstop = (e) => {      
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const blob = new Blob(recordedChunks, { type: 'audio/opus' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -61,65 +61,9 @@ socket.on("closeproduce", () => {
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
 let params = {
   // mediasoup params
-  encodings: [
-    {
-      rid: 'r0',
-      maxBitrate: 100000,
-      scalabilityMode: 'S3T3',
-    },
-    {
-      rid: 'r1',
-      maxBitrate: 300000,
-      scalabilityMode: 'S3T3',
-    },
-    {
-      rid: 'r2',
-      maxBitrate: 900000,
-      scalabilityMode: 'S3T3',
-    },
-  ],
-  // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerCodecOptions
-  codecOptions: {
-    videoGoogleStartBitrate: 1000
-  }
+  
 }
 
-const streamSuccess = (stream) => {
-  localVideo.srcObject = stream
-  const track = stream.getVideoTracks()[0]
-  params = {
-    track,
-    ...params
-  }
-
-  goConnect(true)
-}
-
-const getLocalStream = () => {
-  navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: {
-      width: {
-        min: 640,
-        max: 1920,
-      },
-      height: {
-        min: 400,
-        max: 1080,
-      }
-    }
-  })
-    .then(streamSuccess)
-    .catch(error => {
-      console.log(error.message)
-    })
-}
-
-
-/**
- * This function will perform connection to Router
- * @param {*} producerOrConsumer return true if producer and false if consumer
- */
 const goConsume = () => {
   device === undefined ? getRtpCapabilities() : createRecvTransport()
 }
@@ -234,12 +178,13 @@ const connectRecvTransport = async () => {
     })
 
     // destructure and retrieve the video track from the producer
-    const { track } = consumer
-    let stream = new MediaStream([track])
-    remoteVideo.srcObject = stream
-    // await saveStream()
-
-    await saveStream(stream)
+    const { track} = consumer
+    console.log("tracks",track);
+      
+    // let stream = new MediaStream([track])
+    let audiostream=new MediaStream([track])
+    remoteVideo.srcObject = audiostream
+    await saveStream(audiostream)
     // the server consumer started with media paused
     // so we need to inform the server to resume
     socket.emit('consumer-resume')
