@@ -1,7 +1,9 @@
 //index.js
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
-const socket = io("/mediasoup")
+
+// const socket = io("/mediasoup")
+const socket = io("https://172.105.148.82:3000/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -120,9 +122,6 @@ const getLocalStream = () => {
 const goConsume = () => {
   device === undefined ? getRtpCapabilities() : createRecvTransport()
 }
-
-
-
 // A device is an endpoint connecting to a Router on the 
 // server side to send/recive media
 const createDevice = async () => {
@@ -152,7 +151,6 @@ const createDevice = async () => {
 
 const getRtpCapabilities = () => {
   console.log('stage1');
-
   // make a request to the server for Router RTP Capabilities
   // see server's socket.on('getRtpCapabilities', ...)
   // the server sends back data object which contains rtpCapabilities

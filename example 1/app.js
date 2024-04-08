@@ -127,7 +127,6 @@ peers.on('connection', async socket => {
       router = await worker.createRouter({ mediaCodecs, })
       console.log(`Router ID: ${router.id}`)
     }
-
     getRtpCapabilities(callback)
   })
 
@@ -194,6 +193,7 @@ peers.on('connection', async socket => {
         producerId: producer.id,
         rtpCapabilities
       })) {
+
         console.log('can consume');
         
         // transport can now consume and return a consumer
