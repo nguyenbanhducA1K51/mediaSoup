@@ -15,6 +15,12 @@ const __dirname = path.resolve()
 import cors from "cors"
 import { Server } from 'socket.io'
 import mediasoup, { getSupportedRtpCapabilities } from 'mediasoup'
+import config from './config.js';
+import FFmpeg from './ffmpeg.js';
+import {
+  getPort,
+  releasePort
+} from './port.js';
 
 app.get('/', (req, res) => {
   res.send('Hello from mediasoup app!')
@@ -61,6 +67,7 @@ let producerTransport
 let consumerTransport
 let producer
 let consumer
+const peer = {};
 
 let producerSocketId
 let consumerSocketId
@@ -153,6 +160,8 @@ peers.on('connection', async socket => {
       console.log('transport for this producer closed ')
       producer.close()
     })
+
+    startRecord(peer)
 
     callback({
       id: producer.id
@@ -275,3 +284,68 @@ const createWebRtcTransport = async (callback) => {
     })
   }
 }
+
+
+
+const startRecord = async (peer) => {
+  let recordInfo = await publishProducerRtpStream(peer, producer);
+
+  recordInfo.fileName = Date.now().toString();
+
+  peer.process = new FFmpeg(recordInfo);;
+
+};
+
+const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {
+  console.log('publishProducerRtpStream()');
+
+  // Create the mediasoup RTP Transport used to send media to the GStreamer process
+  const rtpTransportConfig = config.plainRtpTransport;
+
+  const rtpTransport = await router.createPlainTransport(rtpTransportConfig)
+
+  // Set the receiver RTP ports
+  const remoteRtpPort = await getPort();
+
+  let remoteRtcpPort;
+  // If rtpTransport rtcpMux is false also set the receiver RTCP ports
+  if (!rtpTransportConfig.rtcpMux) {
+    remoteRtcpPort = await getPort();
+  }
+
+
+  // Connect the mediasoup RTP transport to the ports used by GStreamer
+  await rtpTransport.connect({
+    ip: '127.0.0.1',
+    port: remoteRtpPort,
+    rtcpPort: remoteRtcpPort
+  });
+
+  const codecs = [];
+  // Codec passed to the RTP Consumer must match the codec in the Mediasoup router rtpCapabilities
+  const routerCodec = router.rtpCapabilities.codecs.find(
+    codec => codec.kind === producer.kind
+  );
+  codecs.push(routerCodec);
+
+  const rtpCapabilities = {
+    codecs,
+    rtcpFeedback: []
+  };
+
+  // Start the consumer paused
+  // Once the gstreamer process is ready to consume resume and send a keyframe
+  const rtpConsumer = await rtpTransport.consume({
+    producerId: producer.id,
+    rtpCapabilities,
+    paused: true
+  });
+
+  return {
+    remoteRtpPort,
+    remoteRtcpPort,
+    localRtcpPort: rtpTransport.rtcpTuple ? rtpTransport.rtcpTuple.localPort : undefined,
+    rtpCapabilities,
+    rtpParameters: rtpConsumer.rtpParameters
+  };
+};
