@@ -2,8 +2,8 @@
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
-// const socket = io("https://172.105.148.82:3000/mediasoup")
-const socket = io("https://localhost:3000/mediasoup")
+const socket = io("https://172.105.148.82:3000/mediasoup")
+// const socket = io("https://localhost:3000/mediasoup")
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   // console.log(socketId, existsProducer)
 })

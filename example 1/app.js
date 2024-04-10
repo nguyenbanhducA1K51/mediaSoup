@@ -67,8 +67,8 @@ let consumerSocketId
 
 const createWorker = async () => {
   worker = await mediasoup.createWorker({
-    rtcMinPort: 2000,
-    rtcMaxPort: 2020,
+    rtcMinPort: 20000,
+    rtcMaxPort: 30000,
   })
   console.log(`worker pid ${worker.pid}`)
 
@@ -83,11 +83,6 @@ const createWorker = async () => {
 
 // We create a Worker as soon as our application starts
 worker = createWorker()
-
-// This is an Array of RtpCapabilities
-// https://mediasoup.org/documentation/v3/mediasoup/rtp-parameters-and-capabilities/#RtpCodecCapability
-// list of media codecs supported by mediasoup ...
-// https://github.com/versatica/mediasoup/blob/v3/src/supportedRtpCapabilities.ts
 const mediaCodecs = [
   {
     kind: 'audio',
