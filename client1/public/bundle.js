@@ -22879,7 +22879,8 @@ const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
 // const socket = io("https://172.105.148.82:3000/mediasoup")
-const socket = io("https://localhost:3000/mediasoup")
+    // const socket = io("https://localhost:3000/mediasoup")
+const socket = io("https://211d-2402-800-61d7-f516-a14b-ea6a-3282-ef33.ngrok-free.app:3000/mediasoup")
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   // console.log(socketId, existsProducer)
 })
@@ -22892,35 +22893,33 @@ let isProducer = false
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerOptions
 // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
 let params = {
-  // mediasoup params
-  // encodings: [
-  //   {
-  //     rid: 'r0',
-  //     maxBitrate: 100000,
-  //     scalabilityMode: 'S3T3',
-  //   },
-  //   {
-  //     rid: 'r1',
-  //     maxBitrate: 300000,
-  //     scalabilityMode: 'S3T3',
-  //   },
-  //   {
-  //     rid: 'r2',
-  //     maxBitrate: 900000,
-  //     scalabilityMode: 'S3T3',
-  //   },
-  // ],
-  // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerCodecOptions
-  // codecOptions: {
-  //   videoGoogleStartBitrate: 1000
-  // }
+  encodings: [
+    {
+      rid: 'r0',
+      maxBitrate: 100000,
+      scalabilityMode: 'S3T3',
+    },
+    {
+      rid: 'r1',
+      maxBitrate: 300000,
+      scalabilityMode: 'S3T3',
+    },
+    {
+      rid: 'r2',
+      maxBitrate: 900000,
+      scalabilityMode: 'S3T3',
+    },
+  ],
+  codecOptions: {
+    videoGoogleStartBitrate: 1000
+  }
 }
 
 const streamSuccess = (stream) => {
   localVideo.srcObject = stream
-  // const track =[stream.getVideoTracks()[0], stream.getAudioTracks()[0]]
-  const track = stream.getAudioTracks()[0]
-  console.log('client1', track);
+  const track =stream.getVideoTracks()[0]
+//   const track = stream.getAudioTracks()[0]
+//   console.log('client1', track);
   // const audioTrack = ;
   params = {
     track,
