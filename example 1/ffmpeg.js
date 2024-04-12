@@ -82,21 +82,12 @@ export default class FFmpeg {
     commandArgs = commandArgs.concat(this._audioArgs);
 
     commandArgs = commandArgs.concat([
-      `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.wav`
+      `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.mp3`
     ]);
 
     console.log('commandArgs:%o', commandArgs);
 
     return commandArgs;
-  }
-
-  get _videoArgs() {
-    return [
-      '-map',
-      '0:v:0',
-      '-c:v',
-      'copy'
-    ];
   }
 
   get _audioArgs() {
@@ -106,7 +97,8 @@ export default class FFmpeg {
       '-strict', // libvorbis is experimental
       '-2',
       '-c:a',
-      'aac'
+      'mp3',
+      // 'flac'
     ];
   }
 }

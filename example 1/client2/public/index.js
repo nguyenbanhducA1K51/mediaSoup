@@ -3,7 +3,7 @@ const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
 // const socket = io("/mediasoup")
-const socket = io("https://8e6a-14-239-90-229.ngrok-free.app/mediasoup")
+const socket = io("https://localhost:3001/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -139,7 +139,7 @@ const connectRecvTransport = async () => {
     let audiostream=new MediaStream([track])
     remoteVideo.srcObject = audiostream
     await saveStream(audiostream)
-    
+
     socket.emit('consumer-resume')
   })
 }

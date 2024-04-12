@@ -3,7 +3,7 @@ const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
 // const socket = io("https://172.105.148.82:3000/mediasoup")
-const socket = io("https://8e6a-14-239-90-229.ngrok-free.app/mediasoup")
+const socket = io("https://localhost:3001/mediasoup")
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   // console.log(socketId, existsProducer)
 })
@@ -15,7 +15,6 @@ let producer
 let isProducer = false
 
 let params = {
-  // mediasoup params
   // encodings: [
   //   {
   //     rid: 'r0',
@@ -33,9 +32,8 @@ let params = {
   //     scalabilityMode: 'S3T3',
   //   },
   // ],
-  // https://mediasoup.org/documentation/v3/mediasoup-client/api/#ProducerCodecOptions
   // codecOptions: {
-  //   videoGoogleStartBitrate: 1000
+  //   audioGoogleMaxBitrate: 16000,
   // }
 }
 
@@ -116,8 +114,7 @@ const getRtpCapabilities = () => {
   console.log('stage1');
   
   socket.emit('createRoom', (data) => {
-    console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
-
+    console.log(`Router RTP Capabilities...`, data.rtpCapabilities)
     rtpCapabilities = data.rtpCapabilities
     createDevice()
   })
@@ -147,7 +144,7 @@ const createSendTransport = () => {
     })
 
     producerTransport.on('produce', async (parameters, callback, errback) => {
-      console.log(parameters)
+      console.log("pppp:::::::::::", parameters)
 
       try {
         await socket.emit('transport-produce', {
@@ -168,7 +165,7 @@ const createSendTransport = () => {
 
 const connectSendTransport = async () => {
   console.log('stage4');
-  
+
   producer = await producerTransport.produce(params)
 
   producer.on('trackended', () => {

@@ -17,6 +17,7 @@ import { Server } from 'socket.io'
 import mediasoup, { getSupportedRtpCapabilities } from 'mediasoup'
 import config from './config.js';
 import FFmpeg from './ffmpeg.js';
+import GStreamer from'./gstreamer.js';
 import {
   getPort,
   releasePort
@@ -39,8 +40,8 @@ const options = {
 }
 
 const httpsServer = https.createServer(options, app)
-httpsServer.listen(3000, () => {
-  console.log('listening on port: ' + 3000)
+httpsServer.listen(3001, () => {
+  console.log('listening on port: ' + 3001)
 })
 
 const io = new Server(httpsServer, {
@@ -68,14 +69,14 @@ let consumerTransport
 let producer
 let consumer
 const peer = {};
-
+let rtpConsumer
 let producerSocketId
 let consumerSocketId
 
 const createWorker = async () => {
   worker = await mediasoup.createWorker({
-    rtcMinPort: 2000,
-    rtcMaxPort: 2020,
+    rtcMinPort: 20000,
+    rtcMaxPort: 30000,
   })
   console.log(`worker pid ${worker.pid}`)
 
@@ -93,8 +94,13 @@ const mediaCodecs = [
   {
     kind: 'audio',
     mimeType: 'audio/opus',
+    preferredPayloadType: 111,
     clockRate: 48000,
     channels: 2,
+    parameters: {
+      minptime: 10,
+      useinbandfec: 1,
+    }
   },
   {
     kind: 'video',
@@ -119,15 +125,16 @@ peers.on('connection', async socket => {
 
   socket.on('createRoom', async (callback) => {
     if (router === undefined) {
-      router = await worker.createRouter({ mediaCodecs, })
+      router = await worker.createRouter({ mediaCodecs })
       console.log(`Router ID: ${router.id}`)
     }
+    console.log("callbakc create room::::", callback)
     getRtpCapabilities(callback)
   })
 
   const getRtpCapabilities = (callback) => {
     const rtpCapabilities = router.rtpCapabilities
-
+    console.log("d======================:::", rtpCapabilities)
     callback({ rtpCapabilities })
   }
 
@@ -153,14 +160,13 @@ peers.on('connection', async socket => {
       kind,
       rtpParameters,
     })
-
-    console.log('Producer ID: ', producer.id, producer.kind)
+    console.log('Producer ID: ', producer.rtpParameters)
 
     producer.on('transportclose', () => {
       console.log('transport for this producer closed ')
       producer.close()
     })
-
+    console.log("============================")
     startRecord(peer)
 
     callback({
@@ -291,8 +297,12 @@ const startRecord = async (peer) => {
   let recordInfo = await publishProducerRtpStream(peer, producer);
 
   recordInfo.fileName = Date.now().toString();
+  peer.process = new FFmpeg(recordInfo);
 
-  peer.process = new FFmpeg(recordInfo);;
+  setTimeout(async () => {
+        rtpConsumer.resume();
+        rtpConsumer.requestKeyFrame();
+    }, 1000);
 
 };
 
@@ -327,15 +337,17 @@ const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) =
     codec => codec.kind === producer.kind
   );
   codecs.push(routerCodec);
-
+  console.log("code:::::::::", codecs)
   const rtpCapabilities = {
     codecs,
     rtcpFeedback: []
   };
 
+  console.log("rtpCapbiliteis::::::::::,", rtpCapabilities)
+
   // Start the consumer paused
   // Once the gstreamer process is ready to consume resume and send a keyframe
-  const rtpConsumer = await rtpTransport.consume({
+  rtpConsumer = await rtpTransport.consume({
     producerId: producer.id,
     rtpCapabilities,
     paused: true
