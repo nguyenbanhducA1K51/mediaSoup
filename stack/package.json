@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": " nodemon app.js",
-    "watch": "watchify client2/public/index.js -o client2/public/bundle.js -v"
+    "watch": "watchify client2/public/index.js -o client2/public/bundle.js -v",
+    "dev": "npm run start && npm run --prefix client1 build:watch"
   },
   "author": "amir eshaq",
   "license": "ISC",

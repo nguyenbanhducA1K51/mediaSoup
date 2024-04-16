@@ -16,15 +16,16 @@ import cors from "cors"
 import { Server } from 'socket.io'
 import mediasoup, { getSupportedRtpCapabilities } from 'mediasoup'
 
+const PORT=3001
 app.get('/', (req, res) => {
   res.send('Hello from mediasoup app!')
 })
 app.use(cors("*"))
 
 const parentDir = path.dirname(__dirname);
-app.use('/post', express.static(path.join(parentDir, 'client1/public')))
+app.use('/post', express.static(path.join(parentDir, 'client1/dist')))
 
-app.use('/get', express.static(path.join(__dirname, "client2/public")))
+app.use('/get', express.static(path.join(parentDir, "client2/public")))
 
 // SSL cert for HTTPS access
 const options = {
@@ -33,8 +34,8 @@ const options = {
 }
 
 const httpsServer = https.createServer(options, app)
-httpsServer.listen(3000, () => {
-  console.log('listening on port: ' + 3000)
+httpsServer.listen(PORT, () => {
+  console.log('listening on port: ' + PORT)
 })
 
 const io = new Server(httpsServer, {

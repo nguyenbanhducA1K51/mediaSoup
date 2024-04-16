@@ -6,18 +6,22 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": " nodemon app.js",
-    "watch": "watchify public/index.js -o public/bundle.js -v"
+    "build:watch": "webpack --watch"
   },
-  "author": "amir eshaq",
+  "author": "duc and chinh",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "express": "^4.17.1",
     "httpolyglot": "^0.1.2",
+    "lodash": "^4.17.21",
     "mediasoup": "^3.13.24",
     "mediasoup-client": "^3.6.37",
     "socket.io": "^4.2.0",
-    "socket.io-client": "^4.2.0"
+    "socket.io-client": "^4.2.0",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
   },
   "devDependencies": {
     "nodemon": "^2.0.12",

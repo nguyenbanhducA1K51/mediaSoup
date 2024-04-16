@@ -1,9 +1,9 @@
-
+const  _ =require("lodash")
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
-
 // const socket = io("https://172.105.148.82:3000/mediasoup")
-const socket = io("https://localhost:3000/mediasoup")
+console.log("router::",process.env.ROUTER_URL)
+const socket = io(process.env.ROUTER_URL)
 socket.on('connection-success', ({ socketId, existsProducer }) => {
   // console.log(socketId, existsProducer)
 })
